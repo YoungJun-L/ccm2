@@ -40,10 +40,10 @@ class Crawling:
 
     def open_driver(self) -> webdriver:
         options = webdriver.ChromeOptions()
-        options.add_argument("headless")  # headless 모드 설정
-        options.add_argument("window-size=1920x1080")  # 화면크기(전체화면)
-        options.add_argument("disable-gpu")
-        options.add_argument("disable-infobars")
+        options.add_argument("--headless")  # headless 모드 설정
+        options.add_argument("--no-sandbox")  # 화면크기(전체화면)
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-infobars")
         options.add_argument("--disable-extensions")
         prefs = {
             "profile.default_content_setting_values": {
@@ -75,7 +75,7 @@ class Crawling:
         }
         options.add_experimental_option("prefs", prefs)
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
-        driver = webdriver.Chrome("./chromedriver.exe", options=options)
+        driver = webdriver.Chrome(chrome_options=options)
         driver.implicitly_wait(5)
         return driver
 
@@ -154,7 +154,7 @@ class Crawling:
                 timeValue = datetime.strptime(timeString, "%Y-%m-%d %H:%M:%S")
                 timeStandard = i.find("td", "gall_date").text
 
-                if timeStandard.find(".") != -1 or cnt == 8:
+                if timeStandard.find(".") != -1 or cnt == 1:
                     print(timeStandard.find("."))
                     print("********************************************")
                     print("********************************************")
