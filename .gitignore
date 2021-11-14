@@ -1,0 +1,7 @@
+/.vscode/*
+__MACOSX/
+a.py
+chromedriver.exe
+dc_realtime.log
+dcinside_hit_crawling.py
+fmkorea_crawling.py

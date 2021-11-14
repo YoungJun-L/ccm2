@@ -10,7 +10,10 @@ import logging
 
 import pandas as pd
 
-logging.basicConfig(filename="dc_realtime.log", encoding="utf-8", level=logging.DEBUG)
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler("dc_realtime.log", "w", "utf-8")
+root_logger.addHandler(handler)
 
 
 class Crawling:
