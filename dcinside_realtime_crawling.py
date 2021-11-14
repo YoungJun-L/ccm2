@@ -2,18 +2,21 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 from datetime import datetime
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
 from pymysql import connect
 
-from itertools import zip_longest
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager
 import time
+
+import pandas as pd
 
 
 class Crawling:
     def __init__(self):
         start = time.time()
         self.url_num_tuple_list = []
+        manager = Manager()
+        self.reply_list = manager.list()
+        self.len_url_tuple_list = manager.list()
         self.get_post_list()
 
         pool = Pool(processes=8)
@@ -21,12 +24,17 @@ class Crawling:
         pool.close()
         pool.join()
 
+        self.update_content_len()
+        self.save_reply()
+
         end = time.time()
+        print()
         print("********************************************")
         print("********************************************")
         print("전체 수행 시간: ", end - start)
         print("********************************************")
         print("********************************************")
+        print()
 
     def connect_to_db(self) -> connect:
         conn = connect(
@@ -75,7 +83,7 @@ class Crawling:
         }
         options.add_experimental_option("prefs", prefs)
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
-        driver = webdriver.Chrome(chrome_options=options)
+        driver = webdriver.Chrome(options=options)
         driver.implicitly_wait(5)
         return driver
 
@@ -84,7 +92,6 @@ class Crawling:
         post_list = []
         startPage = 0
         while True:
-            cnt = 0
             startPage = startPage + 1
 
             reqUrl = Request(
@@ -152,10 +159,9 @@ class Crawling:
 
                 timeString = i.find("td", "gall_date")["title"]
                 timeValue = datetime.strptime(timeString, "%Y-%m-%d %H:%M:%S")
-                timeStandard = i.find("td", "gall_date").text
-
-                if timeStandard.find(".") != -1 or cnt == 1:
-                    print(timeStandard.find("."))
+                # timeStandard = i.find("td", "gall_date").text
+                # timeStandard.find(".") != -1 or
+                if startPage == 285:
                     print("********************************************")
                     print("********************************************")
                     print("긁어온 게시글 수: ", len(post_list))
@@ -207,7 +213,6 @@ class Crawling:
                     )
                 )
                 self.url_num_tuple_list.append((url, num))
-                cnt += 1
 
     def get_content(self, url_num_tuple) -> None:
         url, num = url_num_tuple
@@ -232,6 +237,7 @@ class Crawling:
                     reply_elements = driver.find_elements_by_class_name("usertxt")
                     for e in reply_elements:
                         text = e.text
+                        text = text.replace("\n", " ")
                         if text[-9:] == " - dc App":
                             text = text[:-9]
                         reply_list.append(text)
@@ -241,58 +247,64 @@ class Crawling:
                 except Exception:
                     break
 
-            reply_list = set(reply_list)
-        except TimeoutException:
+            reply_list = list(set(reply_list))
+            self.reply_list.append(
+                [[x, y, z] for x in ["실베"] for y in [num] for z in reply_list]
+            )
+
+            print()
             print("********************************************")
-            print("Time Out")
+            print("긁어온 게시글: ", url)
+            print("긁어온 댓글 수: ", len(reply_list))
+            print("********************************************")
+            print()
+
+            self.len_url_tuple_list.append((len(content[0]), url))
+
+        except Exception:
+            print("********************************************")
+            print(Exception)
             print("********************************************")
             pass
 
-        print()
-        print("********************************************")
-        print("긁어온 게시글: ", url)
-        print("긁어온 댓글 수: ", len(reply_list))
-        print("********************************************")
-        print()
+        finally:
+            driver.quit()
 
-        self.insert_len_reply(len(content[0]), url, reply_list, num)
-
-    def insert_len_reply(self, len, url, reply_list, num) -> None:
+    def update_content_len(self) -> None:
         update_len_sql = "UPDATE post_table SET len = %s WHERE url = %s"
-        insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('실베', %s, %s, UNHEX(MD5(%s)))"
-
         conn = self.connect_to_db()
         cursor = conn.cursor()
 
         start = time.time()
-        cursor.execute(update_len_sql, (len, url))
+        cursor.executemany(update_len_sql, self.len_url_tuple_list)
         end = time.time()
-        print("본문 길이 업데이트 쿼리 시간: ", end - start)
-
-        start = time.time()
-        cursor.executemany(
-            insert_reply_sql,
-            zip_longest([], reply_list, reply_list, fillvalue=num),
-        )
-        end = time.time()
-        print("댓글 추가 쿼리 시간: ", end - start)
+        print("본문 길이 전체 업데이트 쿼리 시간: ", end - start)
 
         conn.commit()
         conn.close()
 
     def insert_post_list(self, post_list) -> None:
         insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('실베', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
-
         conn = self.connect_to_db()
         cursor = conn.cursor()
 
-        start = time.time()
         cursor.executemany(insert_post_list_sql, post_list)
-        end = time.time()
-        print("게시글 리스트 추가 쿼리 시간: ", end - start)
+        print("게시글 리스트 추가 완료")
 
         conn.commit()
         conn.close()
+
+    def save_reply(self) -> None:
+        start = time.time()
+        df = pd.DataFrame()
+        for row in self.reply_list:
+            tmp = pd.DataFrame(row, columns=["site", "num", "reply"])
+            df = df.append(tmp)
+        df.to_parquet("sample.parquet", engine="pyarrow", compression="gzip")
+        end = time.time()
+        print("댓글 전체 추가 시간: ", end - start)
+        row_length = len(df)
+        print(f"댓글 {row_length}개 추가 완료")
 
 
 if __name__ == "__main__":
