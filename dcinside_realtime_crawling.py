@@ -6,8 +6,11 @@ from pymysql import connect
 
 from multiprocessing import Pool, Manager
 import time
+import logging
 
 import pandas as pd
+
+logging.basicConfig(filename="dc_realtime.log", encoding="utf-8", level=logging.DEBUG)
 
 
 class Crawling:
@@ -19,7 +22,7 @@ class Crawling:
         self.len_url_tuple_list = manager.list()
         self.get_post_list()
 
-        pool = Pool(processes=8)
+        pool = Pool(processes=4)
         pool.map(self.get_content, self.url_num_tuple_list)
         pool.close()
         pool.join()
@@ -35,6 +38,7 @@ class Crawling:
         print("********************************************")
         print("********************************************")
         print()
+        logging.debug(f"전체 수행 시간: {end - start}s")
 
     def connect_to_db(self) -> connect:
         conn = connect(
@@ -161,7 +165,7 @@ class Crawling:
                 timeValue = datetime.strptime(timeString, "%Y-%m-%d %H:%M:%S")
                 # timeStandard = i.find("td", "gall_date").text
                 # timeStandard.find(".") != -1 or
-                if startPage == 285:
+                if startPage == 10:
                     print("********************************************")
                     print("********************************************")
                     print("긁어온 게시글 수: ", len(post_list))
@@ -262,6 +266,7 @@ class Crawling:
             self.len_url_tuple_list.append((len(content[0]), url))
 
         except Exception:
+            logging.error(f'사이트: "실베" 주소: {url} 번호: {num}')
             print("********************************************")
             print(Exception)
             print("********************************************")
@@ -289,7 +294,9 @@ class Crawling:
         cursor = conn.cursor()
 
         cursor.executemany(insert_post_list_sql, post_list)
+        list_length = len(post_list)
         print("게시글 리스트 추가 완료")
+        logging.debug(f"게시글 {list_length}개 추가")
 
         conn.commit()
         conn.close()
@@ -300,11 +307,12 @@ class Crawling:
         for row in self.reply_list:
             tmp = pd.DataFrame(row, columns=["site", "num", "reply"])
             df = df.append(tmp)
-        df.to_parquet("sample.parquet", engine="pyarrow", compression="gzip")
+        df.to_parquet("dc_realtime.parquet", engine="pyarrow", compression="gzip")
         end = time.time()
         print("댓글 전체 추가 시간: ", end - start)
         row_length = len(df)
         print(f"댓글 {row_length}개 추가 완료")
+        logging.debug(f"댓글 {row_length}개 추가")
 
 
 if __name__ == "__main__":
