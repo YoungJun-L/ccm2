@@ -6,6 +6,7 @@ from pymysql import connect
 
 from multiprocessing import Pool, Manager
 import time
+import random
 import logging
 
 import pandas as pd
@@ -26,7 +27,7 @@ class Crawling:
         self.end_page = 0
 
     def map_pool(self, cnt) -> None:
-        pool = Pool(processes=8)
+        pool = Pool(processes=20)
         tmp = []
         for _ in range(cnt):
             tmp.append(self.url_num_tuple_list.pop())
@@ -322,7 +323,7 @@ class Crawling:
             conn.commit()
             conn.close()
 
-    def save_reply(self) -> None:
+    def save_reply(self, num) -> None:
         try:
             df = pd.DataFrame()
             for row in self.reply_list:
@@ -341,23 +342,26 @@ class Crawling:
             row_length = len(df)
             print(f"댓글 {row_length}개 추가 완료")
             logging.debug(f"댓글 {row_length}개 추가")
-            df.to_parquet("dc_realtime.parquet", engine="pyarrow", compression="gzip")
+            df.to_parquet(
+                f"dc_realtime{num}.parquet", engine="pyarrow", compression="gzip"
+            )
 
 
 if __name__ == "__main__":
-    start = time.time()
-    c = Crawling()
-    c.get_post_list(0, 1)
-    c.map_pool(1)
-    c.update_content_len()
-    c.save_reply()
-    end = time.time()
-    print()
-    print("********************************************")
-    print("********************************************")
-    print("전체 수행 시간: ", end - start)
-    print("********************************************")
-    print("********************************************")
-    print()
-    logging.debug(f"전체 수행 시간: {end - start}s")
-    time.sleep(10)
+    for i in range(1, 287):
+        start = time.time()
+        c = Crawling()
+        c.get_post_list(i, i + 1)
+        c.map_pool(100)
+        c.update_content_len()
+        c.save_reply(i)
+        end = time.time()
+        print()
+        print("********************************************")
+        print("********************************************")
+        print("전체 수행 시간: ", end - start)
+        print("********************************************")
+        print("********************************************")
+        print()
+        logging.debug(f"전체 수행 시간: {end - start}s")
+        time.sleep(random.randint(8, 23))
