@@ -206,9 +206,10 @@ class Crawling:
                     start_page += 1
 
         except Exception:
-            logging.error("post_list crawling failed")
+            logging.error("Failed to crawl post_list")
             print()
             print("********************************************")
+            print("Failed to crawl post_list")
             print(Exception)
             print("********************************************")
             print()
@@ -216,6 +217,7 @@ class Crawling:
         finally:
             print("********************************************")
             print("********************************************")
+            print()
             print("긁어온 게시글 수: ", len(post_list))
             print("********************************************")
             print("********************************************")
@@ -292,6 +294,7 @@ class Crawling:
             logging.error("Failed to update content_len")
             print()
             print("********************************************")
+            print("Failed to update content_len")
             print(Exception)
             print("********************************************")
             print()
@@ -315,6 +318,7 @@ class Crawling:
             logging.error("Failed to insert post_list")
             print()
             print("********************************************")
+            print("Failed to insert post_list")
             print(Exception)
             print("********************************************")
             print()
@@ -334,6 +338,7 @@ class Crawling:
             logging.error("Failed to save reply")
             print()
             print("********************************************")
+            print("Failed to save reply")
             print(Exception)
             print("********************************************")
             print()
@@ -348,7 +353,7 @@ class Crawling:
 
 
 if __name__ == "__main__":
-    for i in range(1, 287):
+    for i in range(2, 287):
         start = time.time()
         c = Crawling()
         c.get_post_list(i, i + 1)
