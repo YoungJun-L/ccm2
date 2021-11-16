@@ -2,6 +2,8 @@
 __MACOSX/
 a.py
 chromedriver.exe
+dc_realtime.parquet
 dc_realtime.log
 dcinside_hit_crawling.py
+dc_realtime_crawling.py
 fmkorea_crawling.py
