@@ -11,11 +11,6 @@ import logging
 
 import pandas as pd
 
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler("dc_realtime.log", "w", "utf-8")
-root_logger.addHandler(handler)
-
 
 class Crawling:
     def __init__(self):
@@ -353,9 +348,13 @@ class Crawling:
 
 
 if __name__ == "__main__":
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler("dc_realtime.log", "w", "utf-8")
+    root_logger.addHandler(handler)
+    c = Crawling()
     for i in range(2, 287):
         start = time.time()
-        c = Crawling()
         c.get_post_list(i, i + 1)
         c.map_pool(100)
         c.update_content_len()
@@ -364,7 +363,7 @@ if __name__ == "__main__":
         print()
         print("********************************************")
         print("********************************************")
-        print("전체 수행 시간: ", end - start)
+        print(f"전체 수행 시간: {end - start}s")
         print("********************************************")
         print("********************************************")
         print()
