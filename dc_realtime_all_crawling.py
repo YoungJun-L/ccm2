@@ -6,10 +6,10 @@ from pymysql import connect
 
 from multiprocessing import Pool, Manager
 import time
-import random
+import sys
 import logging
-
-import pandas as pd
+import logging.config
+import logging.handlers
 
 
 class Crawling:
@@ -18,15 +18,14 @@ class Crawling:
         manager = Manager()
         self.reply_list = manager.list()
         self.len_url_tuple_list = manager.list()
-        self.start_page = 0
-        self.end_page = 0
 
     def map_pool(self, cnt) -> None:
-        pool = Pool(processes=20)
+        pool = Pool(processes=4)
         tmp = []
         for _ in range(cnt):
             tmp.append(self.url_num_tuple_list.pop())
         pool.map(self.get_content, tmp)
+        logging.debug("Replies Crawled")
         pool.close()
         pool.join()
 
@@ -42,8 +41,8 @@ class Crawling:
 
     def open_driver(self) -> webdriver:
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless")  # headless 모드 설정
-        options.add_argument("--no-sandbox")  # 화면크기(전체화면)
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-infobars")
         options.add_argument("--disable-extensions")
@@ -81,141 +80,106 @@ class Crawling:
         driver.implicitly_wait(5)
         return driver
 
-    def get_post_list(self, start_page, end_page) -> None:
-        self.start_page = start_page
-        self.end_page = end_page
+    def get_post_list(self, page) -> None:
         base_url = "https://gall.dcinside.com/board/lists/?id=dcbest&list_num=100&sort_type=N&exception_mode=recommend&search_head=&page="
         post_list = []
         try:
-            while start_page < end_page:
-                reqUrl = Request(
-                    base_url + str(start_page),
-                    headers={"User-Agent": "Mozilla/5.0"},
+            reqUrl = Request(
+                base_url + str(page),
+                headers={"User-Agent": "Mozilla/5.0"},
+            )
+
+            html = urlopen(reqUrl)
+            soup = BeautifulSoup(html, "html.parser")
+
+            soup = soup.find("tbody")
+            for i in soup.find_all("tr"):
+
+                if (
+                    i.find("td", "gall_num").text.strip() == "설문"
+                    or i.find("td", "gall_num").text.strip() == "공지"
+                    or i.find("td", "gall_num").text.strip() == "이슈"
+                    or i.find("td", "gall_num").text.strip() == "AD"
+                ):
+                    continue
+
+                url = (
+                    "https://gall.dcinside.com"
+                    + i.find(
+                        "td",
+                        {
+                            "class": [
+                                "gall_tit ub-word",
+                                "gall_tit ub-word voice_tit",
+                            ]
+                        },
+                    ).find_all("a")[0]["href"]
                 )
 
-                html = urlopen(reqUrl)
-                soup = BeautifulSoup(html, "html.parser")
-
-                soup = soup.find("tbody")
-                for i in soup.find_all("tr"):
-
-                    if (
-                        i.find("td", "gall_num").text.strip() == "설문"
-                        or i.find("td", "gall_num").text.strip() == "공지"
-                        or i.find("td", "gall_num").text.strip() == "이슈"
-                        or i.find("td", "gall_num").text.strip() == "AD"
-                    ):
-                        continue
-
-                    url = (
-                        "https://gall.dcinside.com"
-                        + i.find(
-                            "td",
-                            {
-                                "class": [
-                                    "gall_tit ub-word",
-                                    "gall_tit ub-word voice_tit",
-                                ]
-                            },
-                        ).find_all("a")[0]["href"]
+                title = (
+                    i.find(
+                        "td",
+                        {
+                            "class": [
+                                "gall_tit ub-word",
+                                "gall_tit ub-word voice_tit",
+                            ]
+                        },
                     )
+                    .find_all("a")[0]
+                    .text.strip()
+                )
 
-                    title = (
-                        i.find(
-                            "td",
-                            {
-                                "class": [
-                                    "gall_tit ub-word",
-                                    "gall_tit ub-word voice_tit",
-                                ]
-                            },
-                        )
-                        .find_all("a")[0]
-                        .text.strip()
+                replyNum = (
+                    i.find(
+                        "td",
+                        {
+                            "class": [
+                                "gall_tit ub-word",
+                                "gall_tit ub-word voice_tit",
+                            ]
+                        },
                     )
+                    .find_all("a")[1]
+                    .text.strip()
+                    .replace("[", "")
+                    .replace("]", "")
+                    .replace(",", "")
+                )
 
-                    replyNum = (
-                        i.find(
-                            "td",
-                            {
-                                "class": [
-                                    "gall_tit ub-word",
-                                    "gall_tit ub-word voice_tit",
-                                ]
-                            },
-                        )
-                        .find_all("a")[1]
-                        .text.strip()
-                        .replace("[", "")
-                        .replace("]", "")
-                        .replace(",", "")
-                    )
+                timeString = i.find("td", "gall_date")["title"]
+                timeValue = datetime.strptime(timeString, "%Y-%m-%d %H:%M:%S")
 
-                    timeString = i.find("td", "gall_date")["title"]
-                    timeValue = datetime.strptime(timeString, "%Y-%m-%d %H:%M:%S")
+                voteNum = i.find("td", "gall_recommend").text.strip().replace(",", "")
 
-                    voteNum = (
-                        i.find("td", "gall_recommend").text.strip().replace(",", "")
-                    )
+                viewNum = i.find("td", "gall_count").text.strip().replace(",", "")
 
-                    viewNum = i.find("td", "gall_count").text.strip().replace(",", "")
+                num = i.find("td", "gall_num").text.strip().replace(",", "")
 
-                    num = i.find("td", "gall_num").text.strip().replace(",", "")
-
-                    print()
-                    print(
-                        "실베-",
+                post_list.append(
+                    (
                         num,
-                        " URL : ",
                         url,
-                        "제목 : ",
                         title,
-                        " 댓글수 : ",
                         replyNum,
-                        " 시간 : ",
-                        timeValue.strftime("%Y-%m-%d %H:%M:%S"),
-                        " 추천수 : ",
-                        voteNum,
-                        " 조회수 : ",
                         viewNum,
+                        voteNum,
+                        timeValue.strftime("%Y-%m-%d %H:%M:%S"),
+                        url,
+                        title,
+                        replyNum,
+                        viewNum,
+                        voteNum,
+                        timeValue.strftime("%Y-%m-%d %H:%M:%S"),
                     )
+                )
+                self.url_num_tuple_list.append((url, num))
 
-                    post_list.append(
-                        (
-                            num,
-                            url,
-                            title,
-                            replyNum,
-                            viewNum,
-                            voteNum,
-                            timeValue.strftime("%Y-%m-%d %H:%M:%S"),
-                            url,
-                            title,
-                            replyNum,
-                            viewNum,
-                            voteNum,
-                            timeValue.strftime("%Y-%m-%d %H:%M:%S"),
-                        )
-                    )
-                    self.url_num_tuple_list.append((url, num))
-                    start_page += 1
-
-        except Exception:
-            logging.error("Failed to crawl post_list")
-            print()
-            print("********************************************")
-            print("Failed to crawl post_list")
-            print(Exception)
-            print("********************************************")
-            print()
+        except Exception as e:
+            logging.error(f"Failed to crawl post_list: {str(e)}")
 
         finally:
-            print("********************************************")
-            print("********************************************")
-            print()
-            print("긁어온 게시글 수: ", len(post_list))
-            print("********************************************")
-            print("********************************************")
+            logging.debug(f"{len(post_list)} Posts Crawled")
             self.insert_post_list(post_list)
 
     def get_content(self, url_num_tuple) -> None:
@@ -252,27 +216,12 @@ class Crawling:
                     break
 
             reply_list = list(set(reply_list))
-            self.reply_list.append(
-                [[x, y, z] for x in ["실베"] for y in [num] for z in reply_list]
-            )
-
-            print()
-            print("********************************************")
-            print("긁어온 게시글: ", url)
-            print("긁어온 댓글 수: ", len(reply_list))
-            print("********************************************")
-            print()
-
+            self.reply_list += [[x, y, y] for x in [num] for y in reply_list]
             self.len_url_tuple_list.append((len(content[0]), url))
 
-        except Exception:
-            logging.error(f'사이트: "실베" 주소: {url} 번호: {num}')
-            print()
-            print("********************************************")
-            print(Exception)
-            print("********************************************")
-            print()
-            pass
+        except Exception as e:
+            logging.error(f"Failed to get content: {str(e)}")
+            logging.error(f'Site: "실베" Url: {url} Num: {num}')
 
         finally:
             driver.quit()
@@ -283,20 +232,14 @@ class Crawling:
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(update_len_sql, self.len_url_tuple_list)
-            print("Successfully content_len updated")
 
-        except Exception:
-            logging.error("Failed to update content_len")
-            print()
-            print("********************************************")
-            print("Failed to update content_len")
-            print(Exception)
-            print("********************************************")
-            print()
+        except Exception as e:
+            logging.error(f"Failed to update content_len: {str(e)}")
 
         finally:
             conn.commit()
             conn.close()
+            logging.debug("Content_len Updated")
 
     def insert_post_list(self, post_list) -> None:
         try:
@@ -305,67 +248,75 @@ class Crawling:
             cursor = conn.cursor()
 
             cursor.executemany(insert_post_list_sql, post_list)
-            list_length = len(post_list)
-            print("Successfully post_list inserted")
-            logging.debug(f"게시글 {list_length}개 추가")
 
-        except Exception:
-            logging.error("Failed to insert post_list")
-            print()
-            print("********************************************")
-            print("Failed to insert post_list")
-            print(Exception)
-            print("********************************************")
-            print()
+        except Exception as e:
+            logging.error(f"Failed to insert post_list: {str(e)}")
 
         finally:
             conn.commit()
             conn.close()
+            logging.debug("Post_list Inserted")
 
-    def save_reply(self, num) -> None:
+    def insert_reply(self) -> None:
         try:
-            df = pd.DataFrame()
-            for row in self.reply_list:
-                tmp = pd.DataFrame(row, columns=["site", "num", "reply"])
-                df = df.append(tmp)
+            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('실베', %s, %s, UNHEX(MD5(%s)))"
+            conn = self.connect_to_db()
+            cursor = conn.cursor()
+            cursor.executemany(
+                insert_reply_sql,
+                self.reply_list,
+            )
 
-        except Exception:
-            logging.error("Failed to save reply")
-            print()
-            print("********************************************")
-            print("Failed to save reply")
-            print(Exception)
-            print("********************************************")
-            print()
+        except Exception as e:
+            logging.error(f"Failed to save reply: {str(e)}")
 
         finally:
-            row_length = len(df)
-            print(f"댓글 {row_length}개 추가 완료")
-            logging.debug(f"댓글 {row_length}개 추가")
-            df.to_parquet(
-                f"dc_realtime{num}.parquet", engine="pyarrow", compression="gzip"
-            )
+            conn.commit()
+            conn.close()
+            logging.debug(f"{len(self.reply_list)} Replies Inserted")
 
 
 if __name__ == "__main__":
+    config = {
+        "version": 1,
+        "formatters": {
+            "complex": {
+                "format": "%(asctime)s %(levelname)s [%(filename)s:%(lineno)d] - %(message)s"
+            },
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "complex",
+                "level": "DEBUG",
+            },
+            "file": {
+                "class": "logging.FileHandler",
+                "filename": "dc_realtime_error.log",
+                "formatter": "complex",
+                "encoding": "utf-8",
+                "level": "ERROR",
+            },
+        },
+        "root": {"handlers": ["console", "file"], "level": "DEBUG"},
+    }
+    logging.config.dictConfig(config)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler("dc_realtime.log", "w", "utf-8")
-    root_logger.addHandler(handler)
+
+    with open("dc_realtime_count.txt", "r") as file:
+        data = file.read().splitlines()[-1]
+        # if data == "1":
+        #     logging.info("SOP")
+        #     sys.exit(0)
+
+    data = int(data) - 1
     c = Crawling()
-    for i in range(2, 287):
-        start = time.time()
-        c.get_post_list(i, i + 1)
-        c.map_pool(100)
-        c.update_content_len()
-        c.save_reply(i)
-        end = time.time()
-        print()
-        print("********************************************")
-        print("********************************************")
-        print(f"전체 수행 시간: {end - start}s")
-        print("********************************************")
-        print("********************************************")
-        print()
-        logging.debug(f"전체 수행 시간: {end - start}s")
-        time.sleep(random.randint(8, 23))
+    start = time.time()
+    c.get_post_list(1)
+    c.map_pool(4)
+    c.update_content_len()
+    c.insert_reply()
+    end = time.time()
+    logging.debug(f"{(end - start):.1f}s")
+    with open("dc_realtime_count.txt", "w") as file:
+        file.write(f"{data}")
