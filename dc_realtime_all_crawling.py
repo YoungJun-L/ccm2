@@ -2,6 +2,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 from datetime import datetime
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from pymysql import connect
 
@@ -26,10 +27,10 @@ class Crawling:
         self.insert_post_list()
         self.post_list = []
 
-        for _ in range(cnt // 9 + 1):
+        for _ in range(cnt // 6 + 1):
             pool = Pool(processes=3)
             tmp = []
-            for _ in range(9):
+            for _ in range(6):
                 if self.url_num_tuple_list:
                     tmp.append(self.url_num_tuple_list.pop())
             pool.map(self.get_content, tmp)
@@ -58,6 +59,7 @@ class Crawling:
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-infobars")
         options.add_argument("--disable-extensions")
+        options.add_argument("--dns-prefetch-disable")
         prefs = {
             "profile.default_content_setting_values": {
                 "cookies": 2,
@@ -195,7 +197,12 @@ class Crawling:
     def get_content(self, url_num_tuple) -> None:
         url, num = url_num_tuple
         driver = self.open_driver()
-        driver.get(url)
+        try:
+            driver.get(url)
+        except TimeoutException as te:
+            print(str(te))
+            driver.navigate().refresh()
+
         try:
             content_element = driver.find_element(
                 By.CSS_SELECTOR,
@@ -232,14 +239,14 @@ class Crawling:
 
         except Exception as e:
             logging.error(f"Failed to get content: {str(e)}")
-            logging.error(f'Site: "실베" Url: {url} Num: {num}')
+            logging.error(f'Site: "REAL" Url: {url} Num: {num}')
 
         finally:
             driver.quit()
 
     def insert_post_list(self) -> None:
         try:
-            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('실베', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
+            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('REAL', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(insert_post_list_sql, self.post_list)
@@ -254,7 +261,7 @@ class Crawling:
 
     def insert_reply(self) -> None:
         try:
-            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('실베', %s, %s, UNHEX(MD5(%s)))"
+            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('REAL', %s, %s, UNHEX(MD5(%s)))"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(
@@ -322,7 +329,7 @@ if __name__ == "__main__":
     data = int(data) - 1
     c = Crawling()
     start = time.time()
-    c.execute(page=1, cnt=5)
+    c.execute(page=1, cnt=100)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
     with open("dc_realtime_count.txt", "w") as file:
