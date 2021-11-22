@@ -14,20 +14,31 @@ import logging.handlers
 
 class Crawling:
     def __init__(self):
+        self.post_list = []
         self.url_num_tuple_list = []
         manager = Manager()
         self.reply_list = manager.list()
         self.len_url_tuple_list = manager.list()
 
-    def map_pool(self, cnt) -> None:
-        pool = Pool(processes=4)
-        tmp = []
-        for _ in range(cnt):
-            tmp.append(self.url_num_tuple_list.pop())
-        pool.map(self.get_content, tmp)
-        logging.debug("Replies Crawled")
-        pool.close()
-        pool.join()
+    def execute(self, page, cnt) -> None:
+        self.get_post_list(page)
+        self.insert_post_list()
+        self.post_list = []
+
+        for _ in range(cnt // 9 + 1):
+            pool = Pool(processes=3)
+            tmp = []
+            for _ in range(9):
+                if self.url_num_tuple_list:
+                    tmp.append(self.url_num_tuple_list.pop())
+            pool.map(self.get_content, tmp)
+            logging.debug("Replies Crawled")
+            pool.close()
+            pool.join()
+            self.insert_reply()
+            self.reply_list[:] = []
+        self.update_content_len()
+        self.len_url_tuple_list[:] = []
 
     def connect_to_db(self) -> connect:
         conn = connect(
@@ -82,7 +93,6 @@ class Crawling:
 
     def get_post_list(self, page) -> None:
         base_url = "https://gall.dcinside.com/board/lists/?id=dcbest&list_num=100&sort_type=N&exception_mode=recommend&search_head=&page="
-        post_list = []
         try:
             reqUrl = Request(
                 base_url + str(page),
@@ -156,7 +166,7 @@ class Crawling:
 
                 num = i.find("td", "gall_num").text.strip().replace(",", "")
 
-                post_list.append(
+                self.post_list.append(
                     (
                         num,
                         url,
@@ -179,8 +189,7 @@ class Crawling:
             logging.error(f"Failed to crawl post_list: {str(e)}")
 
         finally:
-            logging.debug(f"{len(post_list)} Posts Crawled")
-            self.insert_post_list(post_list)
+            logging.debug(f"{len(self.post_list)} Posts Crawled")
 
     def get_content(self, url_num_tuple) -> None:
         url, num = url_num_tuple
@@ -226,28 +235,12 @@ class Crawling:
         finally:
             driver.quit()
 
-    def update_content_len(self) -> None:
-        try:
-            update_len_sql = "UPDATE post_table SET len = %s WHERE url = %s"
-            conn = self.connect_to_db()
-            cursor = conn.cursor()
-            cursor.executemany(update_len_sql, self.len_url_tuple_list)
-
-        except Exception as e:
-            logging.error(f"Failed to update content_len: {str(e)}")
-
-        finally:
-            conn.commit()
-            conn.close()
-            logging.debug("Content_len Updated")
-
-    def insert_post_list(self, post_list) -> None:
+    def insert_post_list(self) -> None:
         try:
             insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('실베', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
             conn = self.connect_to_db()
             cursor = conn.cursor()
-
-            cursor.executemany(insert_post_list_sql, post_list)
+            cursor.executemany(insert_post_list_sql, self.post_list)
 
         except Exception as e:
             logging.error(f"Failed to insert post_list: {str(e)}")
@@ -274,6 +267,21 @@ class Crawling:
             conn.commit()
             conn.close()
             logging.debug(f"{len(self.reply_list)} Replies Inserted")
+
+    def update_content_len(self) -> None:
+        try:
+            update_len_sql = "UPDATE post_table SET len = %s WHERE url = %s"
+            conn = self.connect_to_db()
+            cursor = conn.cursor()
+            cursor.executemany(update_len_sql, self.len_url_tuple_list)
+
+        except Exception as e:
+            logging.error(f"Failed to update content_len: {str(e)}")
+
+        finally:
+            conn.commit()
+            conn.close()
+            logging.debug("Content_len Updated")
 
 
 if __name__ == "__main__":
@@ -305,17 +313,14 @@ if __name__ == "__main__":
 
     with open("dc_realtime_count.txt", "r") as file:
         data = file.read().splitlines()[-1]
-        # if data == "1":
-        #     logging.info("SOP")
-        #     sys.exit(0)
+        if data == "1":
+            logging.info("SOP")
+            sys.exit(0)
 
     data = int(data) - 1
     c = Crawling()
     start = time.time()
-    c.get_post_list(1)
-    c.map_pool(4)
-    c.update_content_len()
-    c.insert_reply()
+    c.execute(page=1, cnt=5)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
     with open("dc_realtime_count.txt", "w") as file:
