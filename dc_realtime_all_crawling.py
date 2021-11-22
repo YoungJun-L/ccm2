@@ -2,6 +2,7 @@ from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 from datetime import datetime
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from pymysql import connect
 
 from multiprocessing import Pool, Manager
@@ -196,8 +197,9 @@ class Crawling:
         driver = self.open_driver()
         driver.get(url)
         try:
-            content_element = driver.find_element_by_css_selector(
-                "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div"
+            content_element = driver.find_element(
+                By.CSS_SELECTOR,
+                "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div",
             )
             content = content_element.text.strip()
             content = (
@@ -211,14 +213,14 @@ class Crawling:
             btn_xpath = "/html/body/div[2]/div[2]/main/section/article[2]/div[3]/div[1]/div[2]/div/div[1]/a"
             while True:
                 try:
-                    reply_elements = driver.find_elements_by_class_name("usertxt")
+                    reply_elements = driver.find_elements(By.CLASS_NAME, "usertxt")
                     for e in reply_elements:
                         text = e.text
                         text = text.replace("\n", " ")
                         if text[-9:] == " - dc App":
                             text = text[:-9]
                         reply_list.append(text)
-                    btn_element = driver.find_element_by_xpath(btn_xpath + f"[{i}]")
+                    btn_element = driver.find_element(By.XPATH, btn_xpath + f"[{i}]")
                     driver.execute_script("arguments[0].click();", btn_element)
                     i += 1
                 except Exception:
