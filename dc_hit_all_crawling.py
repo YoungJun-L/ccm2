@@ -95,7 +95,7 @@ class Crawling:
         return driver
 
     def get_post_list(self, page) -> None:
-        base_url = "https://gall.dcinside.com/board/lists/?id=dcbest&list_num=100&sort_type=N&exception_mode=recommend&search_head=&page="
+        base_url = "https://gall.dcinside.com/board/lists/?id=hit&list_num=100&sort_type=N&exception_mode=recommend&search_head=&page="
         try:
             reqUrl = Request(
                 base_url + str(page),
@@ -201,7 +201,6 @@ class Crawling:
         except TimeoutException as te:
             print(str(te))
             driver.navigate().refresh()
-
         try:
             content_element = driver.find_element_by_css_selector(
                 "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div",
@@ -237,14 +236,14 @@ class Crawling:
 
         except Exception as e:
             logging.error(f"Failed to get content: {str(e)}")
-            logging.error(f'Site: "REAL" Url: {url} Num: {num}')
+            logging.error(f'Site: "힛갤" Url: {url} Num: {num}')
 
         finally:
             driver.quit()
 
     def insert_post_list(self) -> None:
         try:
-            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('REAL', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
+            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('힛갤', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(insert_post_list_sql, self.post_list)
@@ -259,7 +258,7 @@ class Crawling:
 
     def insert_reply(self) -> None:
         try:
-            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('REAL', %s, %s, UNHEX(MD5(%s)))"
+            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('힛갤', %s, %s, UNHEX(MD5(%s)))"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(
@@ -308,7 +307,7 @@ if __name__ == "__main__":
             },
             "file": {
                 "class": "logging.FileHandler",
-                "filename": "dc_realtime_error.log",
+                "filename": "dc_hit_error.log",
                 "formatter": "complex",
                 "encoding": "utf-8",
                 "level": "ERROR",
@@ -319,7 +318,7 @@ if __name__ == "__main__":
     logging.config.dictConfig(config)
     root_logger = logging.getLogger()
 
-    with open("dc_realtime_count.txt", "r") as file:
+    with open("dc_hit_count.txt", "r") as file:
         data = file.read().splitlines()[-1]
         if data == "1":
             logging.info("SOP")
@@ -328,10 +327,10 @@ if __name__ == "__main__":
     data = int(data) - 1
     c = Crawling()
     start = time.time()
-    c.execute(page=1, cnt=100)
+    c.execute(page=1, cnt=1)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
-    with open("dc_realtime_count.txt", "w") as file:
+    with open("dc_hit_count.txt", "w") as file:
         file.write(f"{data}")
 
-# 2021-11-22: page 294
+# 2021-11-22: page 188

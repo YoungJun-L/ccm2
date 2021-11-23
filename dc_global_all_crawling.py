@@ -95,7 +95,7 @@ class Crawling:
         return driver
 
     def get_post_list(self, page) -> None:
-        base_url = "https://gall.dcinside.com/board/lists/?id=dcbest&list_num=100&sort_type=N&exception_mode=recommend&search_head=&page="
+        base_url = "https://gall.dcinside.com/mgallery/board/lists/?id=singlebungle1472&list_num=100&sort_type=N&exception_mode=recommend&search_head=&page="
         try:
             reqUrl = Request(
                 base_url + str(page),
@@ -108,15 +108,15 @@ class Crawling:
             soup = soup.find("tbody")
             for i in soup.find_all("tr"):
                 if (
-                    i.find("td", "gall_num").text.strip() == "설문"
-                    or i.find("td", "gall_num").text.strip() == "공지"
-                    or i.find("td", "gall_num").text.strip() == "이슈"
-                    or i.find("td", "gall_num").text.strip() == "AD"
+                    i.find("td", "gall_subject").text.strip() == "설문"
+                    or i.find("td", "gall_subject").text.strip() == "공지"
+                    or i.find("td", "gall_subject").text.strip() == "이슈"
+                    or i.find("td", "gall_subject").text.strip() == "AD"
                 ):
                     continue
 
                 url = (
-                    "https://gall.dcinside.com"
+                    "https://gall.dcinside.com/"
                     + i.find(
                         "td",
                         {
@@ -204,14 +204,12 @@ class Crawling:
 
         try:
             content_element = driver.find_element_by_css_selector(
-                "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div",
+                "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div.write_div",
             )
             content = content_element.text.strip()
             content = (
                 ((content.replace("\xa0", "")).replace(" ", "")).replace("\n", "")
             ).replace("-dcofficialApp", "")
-            content = content.split("출처:")
-            content.pop()
 
             reply_list = []
             i = 1
@@ -233,18 +231,18 @@ class Crawling:
 
             reply_list = list(set(reply_list))
             self.reply_list += [[x, y, y] for x in [num] for y in reply_list]
-            self.len_url_tuple_list.append((len(content[0]), url))
+            self.len_url_tuple_list.append((len(content), url))
 
         except Exception as e:
             logging.error(f"Failed to get content: {str(e)}")
-            logging.error(f'Site: "REAL" Url: {url} Num: {num}')
+            logging.error(f'Site: "GLOBAL" Url: {url} Num: {num}')
 
         finally:
             driver.quit()
 
     def insert_post_list(self) -> None:
         try:
-            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('REAL', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
+            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('GLOBAL', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(insert_post_list_sql, self.post_list)
@@ -259,7 +257,7 @@ class Crawling:
 
     def insert_reply(self) -> None:
         try:
-            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('REAL', %s, %s, UNHEX(MD5(%s)))"
+            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('GLOBAL', %s, %s, UNHEX(MD5(%s)))"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(
@@ -308,7 +306,7 @@ if __name__ == "__main__":
             },
             "file": {
                 "class": "logging.FileHandler",
-                "filename": "dc_realtime_error.log",
+                "filename": "dc_global_error.log",
                 "formatter": "complex",
                 "encoding": "utf-8",
                 "level": "ERROR",
@@ -319,7 +317,7 @@ if __name__ == "__main__":
     logging.config.dictConfig(config)
     root_logger = logging.getLogger()
 
-    with open("dc_realtime_count.txt", "r") as file:
+    with open("dc_global_count.txt", "r") as file:
         data = file.read().splitlines()[-1]
         if data == "1":
             logging.info("SOP")
@@ -328,10 +326,10 @@ if __name__ == "__main__":
     data = int(data) - 1
     c = Crawling()
     start = time.time()
-    c.execute(page=1, cnt=100)
+    c.execute(page=1, cnt=6)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
-    with open("dc_realtime_count.txt", "w") as file:
+    with open("dc_global_count.txt", "w") as file:
         file.write(f"{data}")
 
-# 2021-11-22: page 294
+# 2021-11-22: page 898

@@ -5,9 +5,7 @@ chromedriver.exe
 dc_realtime.parquet
 dc_realtime.log
 dc_realtime_crawling.py
-dc_hit_all_crawling.py
-dc_hit_count.txt
+dc_global_error.log
 dc_hit_error.log
-dc_realtime_count.txt
 dc_realtime_error.log
 fmkorea_crawling.py
