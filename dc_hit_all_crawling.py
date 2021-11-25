@@ -95,7 +95,7 @@ class Crawling:
         return driver
 
     def get_post_list(self, page) -> None:
-        base_url = "https://gall.dcinside.com/board/lists/?id=hit&list_num=100&sort_type=N&exception_mode=recommend&search_head=&page="
+        base_url = "https://gall.dcinside.com/board/lists/?id=hit&list_num=50&sort_type=N&exception_mode=recommend&search_head=&page="
         try:
             reqUrl = Request(
                 base_url + str(page),
@@ -207,8 +207,11 @@ class Crawling:
             )
             content = content_element.text.strip()
             content = (
-                ((content.replace("\xa0", "")).replace(" ", "")).replace("\n", "")
-            ).replace("-dcofficialApp", "")
+                content.replace("\xa0", "")
+                .replace(" ", "")
+                .replace("\n", "")
+                .replace("-dcofficialApp", "")
+            )
             content = content.split("출처:")
             content.pop()
 
@@ -320,17 +323,17 @@ if __name__ == "__main__":
 
     with open("dc_hit_count.txt", "r") as file:
         data = file.read().splitlines()[-1]
-        if data == "1":
+        if data == "0":
             logging.info("SOP")
             sys.exit(0)
 
     data = int(data) - 1
     c = Crawling()
     start = time.time()
-    c.execute(page=1, cnt=1)
+    c.execute(page=data, cnt=50)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
     with open("dc_hit_count.txt", "w") as file:
         file.write(f"{data}")
 
-# 2021-11-22: page 188
+# 2021-11-22: page 73
