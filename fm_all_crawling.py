@@ -60,10 +60,14 @@ class Crawling:
 
                 timeString = i.find("td", "time").text.strip().split(":")
 
-                timeValue = datetime.datetime.combine(
-                    datetime.date.today(),
-                    datetime.time(int(timeString[0]), int(timeString[1])),
-                )
+                if len(timeString) == 1:
+                    timeValue = timeString[0] + " 00:00:00"
+
+                else:
+                    timeValue = datetime.datetime.combine(
+                        datetime.date.today(),
+                        datetime.time(int(timeString[0]), int(timeString[1])),
+                    ).strftime("%Y-%m-%d %H:%M:%S")
 
                 voteNum = i.find_all("td", "m_no")[0].text.strip().replace(",", "")
 
@@ -80,13 +84,13 @@ class Crawling:
                         replyNum,
                         viewNum,
                         voteNum,
-                        timeValue.strftime("%Y-%m-%d %H:%M:%S"),
+                        timeValue,
                         url,
                         title,
                         replyNum,
                         viewNum,
                         voteNum,
-                        timeValue.strftime("%Y-%m-%d %H:%M:%S"),
+                        timeValue,
                     )
                 )
                 self.url_num_tuple_list.append((url, num))
@@ -216,7 +220,7 @@ if __name__ == "__main__":
     data = int(data) - 1
     c = Crawling()
     start = time.time()
-    c.execute(page=data, cnt=20)
+    c.execute(page=1, cnt=20)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
     with open("fm_count.txt", "w") as file:
