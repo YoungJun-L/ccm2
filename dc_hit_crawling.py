@@ -322,6 +322,6 @@ if __name__ == "__main__":
 
     c = Crawling()
     start = time.time()
-    c.execute(page=1, cnt=1)
+    c.execute(page=1, cnt=50)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
