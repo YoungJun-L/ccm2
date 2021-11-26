@@ -238,14 +238,14 @@ class Crawling:
 
         except Exception as e:
             logging.error(f"Failed to get content: {str(e)}")
-            logging.error(f'Site: "힛갤" Url: {url} Num: {num}')
+            logging.error(f'Site: "HIT" Url: {url} Num: {num}')
 
         finally:
             driver.quit()
 
     def insert_post_list(self) -> None:
         try:
-            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('힛갤', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
+            insert_post_list_sql = "INSERT INTO post_table (site, num, url, title, replyNum, viewNum, voteNum, timeUpload) VALUES ('HIT', %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE url = %s, title = %s, replyNum = %s, viewNum = %s, voteNum = %s, timeUpload = %s"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(insert_post_list_sql, self.post_list)
@@ -260,7 +260,7 @@ class Crawling:
 
     def insert_reply(self) -> None:
         try:
-            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('힛갤', %s, %s, UNHEX(MD5(%s)))"
+            insert_reply_sql = "INSERT IGNORE INTO reply_table (site, num, reply, reply_hash) VALUES ('HIT', %s, %s, UNHEX(MD5(%s)))"
             conn = self.connect_to_db()
             cursor = conn.cursor()
             cursor.executemany(
