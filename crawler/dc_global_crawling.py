@@ -203,7 +203,7 @@ class Crawling:
 
         try:
             content_element = driver.find_element_by_css_selector(
-                "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div.write_div",
+                "#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div.write_div",
             )
             content = content_element.text.strip()
             content = (
