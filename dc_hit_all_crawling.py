@@ -310,7 +310,7 @@ if __name__ == "__main__":
             },
             "file": {
                 "class": "logging.FileHandler",
-                "filename": "dc_hit_error.log",
+                "filename": "dc_hit_all_error.log",
                 "formatter": "complex",
                 "encoding": "utf-8",
                 "level": "ERROR",

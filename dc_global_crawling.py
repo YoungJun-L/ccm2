@@ -7,7 +7,6 @@ from pymysql import connect
 
 from multiprocessing import Pool, Manager
 import time
-import sys
 import logging
 import logging.config
 import logging.handlers
@@ -309,7 +308,7 @@ if __name__ == "__main__":
             },
             "file": {
                 "class": "logging.FileHandler",
-                "filename": "dc_global_all_error.log",
+                "filename": "dc_global_error.log",
                 "formatter": "complex",
                 "encoding": "utf-8",
                 "level": "ERROR",
@@ -320,19 +319,8 @@ if __name__ == "__main__":
     logging.config.dictConfig(config)
     root_logger = logging.getLogger()
 
-    with open("dc_global_count.txt", "r") as file:
-        data = file.read().splitlines()[-1]
-        if data == "0":
-            logging.info("SOP")
-            sys.exit(0)
-
-    data = int(data) - 1
     c = Crawling()
     start = time.time()
-    c.execute(page=data, cnt=50)
+    c.execute(page=1, cnt=50)
     end = time.time()
     logging.debug(f"{(end - start):.1f}s")
-    with open("dc_global_count.txt", "w") as file:
-        file.write(f"{data}")
-
-# 2021-11-25: page 1806

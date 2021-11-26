@@ -311,7 +311,7 @@ if __name__ == "__main__":
             },
             "file": {
                 "class": "logging.FileHandler",
-                "filename": "dc_realtime_error.log",
+                "filename": "dc_realtime_all_error.log",
                 "formatter": "complex",
                 "encoding": "utf-8",
                 "level": "ERROR",
