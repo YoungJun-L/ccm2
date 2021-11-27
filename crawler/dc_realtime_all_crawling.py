@@ -200,7 +200,6 @@ class Crawling:
             driver.get(url)
         except TimeoutException as te:
             print(str(te))
-            driver.navigate().refresh()
 
         try:
             content_element = driver.find_element_by_css_selector(

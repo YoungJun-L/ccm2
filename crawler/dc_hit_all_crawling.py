@@ -200,7 +200,7 @@ class Crawling:
             driver.get(url)
         except TimeoutException as te:
             print(str(te))
-            driver.navigate().refresh()
+
         try:
             content_element = driver.find_element_by_css_selector(
                 "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div",
@@ -336,4 +336,5 @@ if __name__ == "__main__":
     with open("dc_hit_count.txt", "w") as file:
         file.write(f"{data}")
 
-# 2021-11-22: page 73
+# 2017 ~
+# 2021-11-27: page 53

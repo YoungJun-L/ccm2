@@ -95,6 +95,7 @@ class Crawling:
 
     def get_post_list(self, page) -> None:
         base_url = "https://gall.dcinside.com/board/lists/?id=hit&list_num=50&sort_type=N&exception_mode=recommend&search_head=&page="
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         try:
             reqUrl = Request(
                 base_url + str(page),
@@ -161,6 +162,11 @@ class Crawling:
                 timeString = i.find("td", "gall_date")["title"]
                 timeValue = datetime.strptime(timeString, "%Y-%m-%d %H:%M:%S")
 
+                if (
+                    today - timeValue.replace(hour=0, minute=0, second=0, microsecond=0)
+                ).days >= 1:
+                    break
+
                 voteNum = i.find("td", "gall_recommend").text.strip().replace(",", "")
 
                 viewNum = i.find("td", "gall_count").text.strip().replace(",", "")
@@ -199,7 +205,6 @@ class Crawling:
             driver.get(url)
         except TimeoutException as te:
             print(str(te))
-            driver.navigate().refresh()
         try:
             content_element = driver.find_element_by_css_selector(
                 "main#container > section > article:nth-child(3) > div.view_content_wrap > div > div.inner.clear > div.writing_view_box > div",
