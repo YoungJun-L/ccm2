@@ -7,6 +7,7 @@ from pymysql import connect
 
 from multiprocessing import Pool, Manager
 import time
+import random
 import logging
 import logging.config
 import logging.handlers
@@ -38,6 +39,7 @@ class Crawling:
             pool.join()
             self.insert_reply()
             self.reply_list[:] = []
+            time.sleep(random.randint(30, 90))
         self.update_content_len()
         self.len_url_tuple_list[:] = []
 
