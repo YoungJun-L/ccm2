@@ -125,7 +125,6 @@ class Crawling:
 
             reply_list = list(set(reply_list))
             self.reply_list += [(x, y, y) for x in [num] for y in reply_list]
-            self.len_url_tuple_list.append((content_len, url))
 
         except Exception as e:
             logging.error(f"Failed to get content: {str(e)}")
@@ -133,6 +132,7 @@ class Crawling:
 
         finally:
             logging.debug("Content_len, Replies Crawled")
+            self.len_url_tuple_list.append((content_len, url))
 
     def insert_post_list(self) -> None:
         try:
