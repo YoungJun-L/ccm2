@@ -140,23 +140,26 @@ class Crawling:
                     .find_all("a")[0]
                     .text.strip()
                 )
+                replyNum = i.find(
+                    "td",
+                    {
+                        "class": [
+                            "gall_tit ub-word",
+                            "gall_tit ub-word voice_tit",
+                        ]
+                    },
+                ).find_all("a")
 
-                replyNum = (
-                    i.find(
-                        "td",
-                        {
-                            "class": [
-                                "gall_tit ub-word",
-                                "gall_tit ub-word voice_tit",
-                            ]
-                        },
+                if len(replyNum) > 1:
+                    replyNum = (
+                        replyNum[1]
+                        .text.strip()
+                        .replace("[", "")
+                        .replace("]", "")
+                        .replace(",", "")
                     )
-                    .find_all("a")[1]
-                    .text.strip()
-                    .replace("[", "")
-                    .replace("]", "")
-                    .replace(",", "")
-                )
+                else:
+                    replyNum = 0
 
                 timeString = i.find("td", "gall_date")["title"]
                 timeValue = datetime.strptime(timeString, "%Y-%m-%d %H:%M:%S")
